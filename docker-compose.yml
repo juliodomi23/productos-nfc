@@ -1,0 +1,23 @@
+services:
+  productos-nfc:
+    build: .
+    # EasyPanel enruta el dominio a este puerto por la red interna de Docker (Traefik).
+    # A propósito NO se publica al host (nada de "ports: 3040:3040"): así nadie puede
+    # entrar por http://IP:3040 saltándose el HTTPS. El puerto se mapea al dominio
+    # desde el panel de EasyPanel (Domains → puerto 3040).
+    expose:
+      - "3040"
+    environment:
+      # EasyPanel inyecta estas variables desde la pestaña "Environment" del servicio.
+      TZ: ${TZ:-America/Mexico_City}
+      BASE_URL: ${BASE_URL:-https://nfc.ambarrojostudios.cloud}
+      SUPERADMIN_USER: ${SUPERADMIN_USER:-admin}
+      # Sin valor por defecto a propósito: el server aborta al arrancar si queda
+      # vacía o con la clave del repo (ver server.js). Se define en EasyPanel.
+      SUPERADMIN_PASS: ${SUPERADMIN_PASS:-}
+    volumes:
+      - nfc_data:/data
+    restart: unless-stopped
+
+volumes:
+  nfc_data:

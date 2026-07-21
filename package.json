@@ -1,0 +1,16 @@
+{
+  "name": "productos-nfc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capa NFC de Ámbar Rojo: un tag físico -> un producto (reseñas, menú, lealtad, checador, vCard)",
+  "main": "server.js",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js",
+    "verificar": "node verificar-nfc.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
