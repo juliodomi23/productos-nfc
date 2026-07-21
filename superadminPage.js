@@ -2,7 +2,7 @@ const { layout } = require('./ui');
 const { TIPOS } = require('./db');
 
 const OPCIONES_TIPO = Object.entries(TIPOS)
-  .map(([k, v]) => `<option value="${k}">${v.label}${v.nativo ? '' : ' (redirect)'}</option>`).join('');
+  .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
 
 function renderSuperadmin() {
   const body = `
@@ -24,26 +24,23 @@ function renderSuperadmin() {
     </div>
 
     <div class="card">
-      <h2>2. Alta de cliente</h2>
+      <h2>2. Alta de cliente (opcional, para agrupar etiquetas)</h2>
       <div class="row">
         <div><label for="cslug">Slug</label><input id="cslug" placeholder="tacos-el-primo"></div>
         <div><label for="cnom">Nombre</label><input id="cnom" placeholder="Tacos El Primo"></div>
       </div>
-      <label for="cpass">Contraseña del panel</label><input id="cpass" placeholder="secreta">
       <button onclick="crearCliente()">Crear cliente</button>
       <div id="mc" class="msg"></div>
     </div>
 
     <div class="card">
-      <h2>3. Asignar etiqueta</h2>
-      <p class="muted">Reasignar no requiere volver a grabar el tag físico.</p>
+      <h2>3. Asignar etiqueta a un producto</h2>
+      <p class="muted">La etiqueta redirige al destino. Reasignar no requiere volver a grabar el tag.</p>
       <label for="acod">Código</label><input id="acod" placeholder="a7k2m9">
-      <label for="acli">Cliente</label><select id="acli"></select>
-      <label for="atipo">Producto</label><select id="atipo">${OPCIONES_TIPO}</select>
-      <label for="adest">Destino (solo redirect)</label>
-      <input id="adest" placeholder="https://resenas.ambarrojo.mx/tacos-el-primo">
-      <label for="acfg">Config JSON (opcional)</label>
-      <input id="acfg" placeholder='{"sucursal":"Centro","lat":16.75,"lon":-93.11,"radio_m":120}'>
+      <label for="acli">Cliente (opcional)</label><select id="acli"></select>
+      <label for="atipo">Producto</label><select id="atipo" onchange="pistaDestino()">${OPCIONES_TIPO}</select>
+      <label for="adest">Destino (URL del producto)</label>
+      <input id="adest" placeholder="">
       <button onclick="asignar()">Asignar</button>
       <div id="ma" class="msg"></div>
     </div>
@@ -64,11 +61,16 @@ function renderSuperadmin() {
       if(!r.ok) throw new Error(d.error||'Error '+r.status);
       return d;
     }
+    // Ayuda: al elegir producto, prellena el destino con el dominio del producto.
+    function pistaDestino(){
+      const t=TIPOS[$('atipo').value];
+      if(t && !$('adest').value) $('adest').value=t.dominio+'/';
+    }
     async function cargar(){
       const s=await api('/superadmin/api/resumen');
       $('resumen').textContent=s.clientes+' clientes · '+s.tags+' etiquetas ('+s.sin_asignar+' sin asignar) · '+s.escaneos+' escaneos';
       const cl=await api('/superadmin/api/clientes');
-      $('acli').innerHTML='<option value="">— sin asignar —</option>'+
+      $('acli').innerHTML='<option value="">— sin cliente —</option>'+
         cl.map(c=>'<option value="'+c.id+'">'+c.nombre+'</option>').join('');
       const tags=await api('/superadmin/api/tags');
       $('tabla').innerHTML=tags.slice(0,100).map(t=>'<tr><td><code>'+t.codigo+'</code></td><td>'+
@@ -85,17 +87,16 @@ function renderSuperadmin() {
     async function crearCliente(){
       try{
         await api('/superadmin/api/clientes',{method:'POST',
-          body:JSON.stringify({slug:$('cslug').value,nombre:$('cnom').value,admin_pass:$('cpass').value})});
+          body:JSON.stringify({slug:$('cslug').value,nombre:$('cnom').value})});
         aviso($('mc'),'Cliente creado',true); cargar();
       }catch(e){ aviso($('mc'),e.message,false); }
     }
     async function asignar(){
       try{
-        const cfg=$('acfg').value.trim();
         await api('/superadmin/api/tags/'+encodeURIComponent($('acod').value.trim()),{method:'PUT',
           body:JSON.stringify({
             cliente_id:Number($('acli').value)||null, tipo:$('atipo').value,
-            destino:$('adest').value.trim()||null, config:cfg?JSON.parse(cfg):undefined })});
+            destino:$('adest').value.trim()||null })});
         aviso($('ma'),'Etiqueta asignada',true); cargar();
       }catch(e){ aviso($('ma'),e.message,false); }
     }
